@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1117">
+<title>FitPlan · Rutina semanal guiada</title>
+<style>
+  :root{
+    --bg:#0d1117; --surface:#161b22; --surface2:#1b2130; --line:#252d3b;
+    --text:#e6edf3; --muted:#8b95a5;
+    --accent:#2dd4a7; --accent-soft:rgba(45,212,167,.13);
+    --warm:#f0b429; --warm-soft:rgba(240,180,41,.13);
+    --cardio:#f25c8a; --cardio-soft:rgba(242,92,138,.13);
+    --radius:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.45;
+    padding-bottom:40px;
+  }
+  button{font:inherit;color:inherit}
+
+  .top{
+    position:sticky; top:0; z-index:20;
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    padding:14px 16px;
+    background:rgba(13,17,23,.86);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex;align-items:center;gap:10px;min-width:0}
+  .logo{
+    width:36px;height:36px;flex:0 0 36px;border-radius:11px;
+    display:grid;place-items:center;font-size:18px;
+    background:linear-gradient(135deg,var(--accent),#0ea5e9);
+    color:#05130f;
+  }
+  .brand strong{display:block;font-size:15px;letter-spacing:-.2px}
+  .brand small{display:block;font-size:11px;color:var(--muted)}
+  .global{flex:0 0 auto;text-align:right}
+  .global span{font-size:11px;color:var(--muted);display:block;margin-bottom:4px}
+  .track{width:110px;height:6px;border-radius:99px;background:var(--surface2);overflow:hidden}
+  .track > div{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--accent),#38bdf8);transition:width .35s ease}
+
+  .days{
+    display:flex; gap:8px; overflow-x:auto; padding:14px 16px 6px;
+    scrollbar-width:none; -webkit-overflow-scrolling:touch;
+  }
+  .days::-webkit-scrollbar{display:none}
+  .day-btn{
+    flex:0 0 auto; padding:9px 16px; border-radius:99px; cursor:pointer;
+    border:1px solid var(--line); background:var(--surface); color:var(--muted);
+    font-size:13px; font-weight:600; white-space:nowrap;
+    transition:.18s ease; position:relative;
+  }
+  .day-btn:hover{border-color:#38445a;color:var(--text)}
+  .day-btn.active{background:var(--accent);border-color:var(--accent);color:#05130f}
+  .day-btn .dot{
+    position:absolute;top:6px;right:8px;width:6px;height:6px;border-radius:50%;
+    background:var(--accent);opacity:0;
+  }
+  .day-btn.active .dot{background:#05130f}
+  .day-btn.partial .dot{opacity:1}
+  .day-btn.full .dot{opacity:1;background:#38bdf8}
+  .day-btn.active.partial .dot,.day-btn.active.full .dot{opacity:1}
+
+  main{padding:10px 16px 0; max-width:1400px; margin:0 auto}
+
+  .day-head{
+    display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between;
+    gap:14px; padding:14px 0 18px;
+  }
+  .day-head h1{margin:0;font-size:clamp(22px,4vw,30px);letter-spacing:-.6px}
+  .day-head p{margin:4px 0 0;color:var(--muted);font-size:14px}
+  .day-progress{flex:1 1 180px; min-width:150px; max-width:320px}
+  .day-progress .track{width:100%}
+  .day-progress small{display:block;font-size:11px;color:var(--muted);margin-top:6px}
+
+  .rest-card{
+    margin-top:20px;
+    background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--radius); padding:38px 24px; text-align:center;
+  }
+  .rest-card .icon{font-size:44px; line-height:1; margin-bottom:10px}
+  .rest-card h2{margin:0 0 8px; font-size:20px; letter-spacing:-.3px}
+  .rest-card p{margin:0; color:var(--muted); font-size:14px; max-width:520px; margin-inline:auto}
+
+  .block{margin-bottom:26px}
+  .block-head{
+    display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap;
+  }
+  .block-head h2{margin:0;font-size:15px;font-weight:700;letter-spacing:.2px}
+  .block-head .count{font-size:12px;color:var(--muted);font-weight:500}
+  .tag{
+    font-size:10px;font-weight:800;letter-spacing:.9px;text-transform:uppercase;
+    padding:4px 9px;border-radius:6px;
+  }
+  .tag.warm{background:var(--warm-soft);color:var(--warm)}
+  .tag.main{background:var(--accent-soft);color:var(--accent)}
+  .tag.cardio{background:var(--cardio-soft);color:var(--cardio)}
+
+  .grid{display:grid;gap:12px;grid-template-columns:1fr}
+  @media (min-width:760px){ .grid{grid-template-columns:repeat(2,1fr)} }
+  @media (min-width:1200px){ .grid{grid-template-columns:repeat(3,1fr)} }
+
+  .ex{
+    position:relative; display:flex; gap:14px; align-items:flex-start;
+    background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--radius); padding:14px;
+    transition:border-color .2s, transform .2s, opacity .2s;
+  }
+  .ex:hover{border-color:#374256; transform:translateY(-2px)}
+  .ex.done{opacity:.55}
+  .ex.done h3{text-decoration:line-through; text-decoration-color:var(--muted)}
+
+  .visual{
+    flex:0 0 82px; width:82px; height:82px; border-radius:13px;
+    background:var(--surface2); display:grid; place-items:center; overflow:hidden;
+  }
+  @media (min-width:420px){ .visual{flex-basis:96px;width:96px;height:96px} }
+  .visual.warm{color:var(--warm)}
+  .visual.main{color:var(--accent)}
+  .visual.cardio{color:var(--cardio)}
+
+  .info{min-width:0; flex:1; padding-right:24px}
+  .info h3{margin:0 0 6px; font-size:14.5px; font-weight:650; letter-spacing:-.1px}
+  .meta{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:7px; align-items:center}
+  .meta span{
+    font-size:10.5px; font-weight:700; letter-spacing:.3px;
+    padding:3px 8px; border-radius:6px; background:var(--surface2); color:var(--muted);
+  }
+  .video-btn{
+    font-size:10.5px; font-weight:700; letter-spacing:.3px;
+    padding:4px 9px; border-radius:6px; cursor:pointer;
+    background:rgba(56,189,248,.12); color:#38bdf8;
+    border:1px solid rgba(56,189,248,.25);
+    display:inline-flex; align-items:center; gap:4px;
+    transition:.15s ease;
+  }
+  .video-btn:hover{background:rgba(56,189,248,.22);border-color:#38bdf8}
+  .desc{margin:0; font-size:12.5px; color:var(--muted); line-height:1.5}
+
+  .check{
+    position:absolute; top:12px; right:12px;
+    width:26px; height:26px; border-radius:50%; cursor:pointer;
+    border:1.5px solid var(--line); background:transparent;
+    display:grid; place-items:center; padding:0;
+    color:transparent; font-size:13px; line-height:1;
+    transition:.18s ease;
+  }
+  .check:hover{border-color:var(--accent); color:var(--accent)}
+  .ex.done .check{background:var(--accent); border-color:var(--accent); color:#05130f}
+
+  .fig{width:100%; height:100%; display:block}
+  .fig .body line{stroke:currentColor; stroke-width:7; stroke-linecap:round; fill:none}
+  .fig .body circle{fill:currentColor; stroke:none}
+  .fig .ground{stroke:#2b3444; stroke-width:3; stroke-dasharray:7 7; stroke-linecap:round}
+
+  .reset{
+    border:1px solid var(--line); background:var(--surface); color:var(--muted);
+    padding:8px 14px; border-radius:10px; font-size:12px; font-weight:600;
+    cursor:pointer; transition:.18s;
+  }
+  .reset:hover{border-color:#f2555a; color:#f2555a}
+
+  /* Modal video */
+  .modal{
+    position:fixed; inset:0; z-index:60;
+    background:rgba(0,0,0,.75);
+    display:grid; place-items:center; padding:16px;
+    opacity:0; pointer-events:none; transition:opacity .2s;
+  }
+  .modal.open{opacity:1; pointer-events:auto}
+  .modal-content{
+    width:min(920px,100%); background:var(--surface);
+    border:1px solid var(--line); border-radius:var(--radius);
+    overflow:hidden; position:relative;
+    transform:scale(.96); transition:transform .2s;
+  }
+  .modal.open .modal-content{transform:scale(1)}
+  .modal-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 16px; border-bottom:1px solid var(--line);
+  }
+  .modal-head strong{font-size:14px}
+  .modal-close{
+    background:transparent; border:1px solid var(--line);
+    width:30px;height:30px;border-radius:9px;cursor:pointer;
+    display:grid;place-items:center;color:var(--muted);font-size:18px;line-height:1;
+    transition:.15s;
+  }
+  .modal-close:hover{color:#f2555a;border-color:#f2555a}
+  .modal-body{padding:0; background:#000; aspect-ratio:16/9; position:relative}
+  .modal-body iframe,.modal-body video{position:absolute;inset:0;width:100%;height:100%;border:0}
+  .modal-body img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
+  .modal-body .fallback{
+    position:absolute; inset:0; display:grid; place-items:center;
+    color:var(--muted); font-size:13px; text-align:center; padding:20px;
+  }
+  .modal-body .fallback a{color:var(--accent); text-decoration:underline}
+
+  footer{
+    text-align:center; color:var(--muted); font-size:11.5px;
+    padding:26px 16px 10px; border-top:1px solid var(--line); margin-top:10px;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <div class="logo">⚡</div>
+    <div>
+      <strong>FitPlan</strong>
+      <small>Rutina semanal guiada</small>
+    </div>
+  </div>
+  <div class="global">
+    <span id="gText">0 / 0 completados</span>
+    <div class="track"><div id="gBar"></div></div>
+  </div>
+</header>
+
+<nav class="days" id="days" aria-label="Selector de día"></nav>
+<main id="main"></main>
+<footer>Marca cada ejercicio al terminarlo · Tu progreso se guarda en este navegador</footer>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="modal-content">
+    <div class="modal-head">
+      <strong id="modalTitle">Tutorial</strong>
+      <button class="modal-close" id="modalClose" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   1. LIBRERÍA DE ANIMACIONES (SMIL)
+   ========================================================= */
+const ANIMS = {
+  'jumping-jack': { d:0.9, k:{
+    '.body':    { t:'tr', v:['0 0','0 -6'] },
+    '.arm-l':   { t:'rot', v:[0, 75] },
+    '.arm-r':   { t:'rot', v:[0, -75] },
+    '.thigh-l': { t:'rot', v:[0, 18] },
+    '.thigh-r': { t:'rot', v:[0, -18] },
+  }},
+  'arm-circles': { d:2, linear:true, alt:false, k:{
+    '.arm-l': { t:'rot', v:[0, 360] },
+    '.arm-r': { t:'rot', v:[0, -360] },
+  }},
+  'twist': { d:1.4, k:{
+    '.upper': { t:'rot', v:[0, 14] },
+    '.arm-l': { t:'rot', v:[0, -18] },
+    '.arm-r': { t:'rot', v:[0, 18] },
+  }},
+  'squat': { d:1.5, k:{
+    '.body':    { t:'tr', v:['0 0','0 16'] },
+    '.thigh-l': { t:'rot', v:[0, 34] },
+    '.thigh-r': { t:'rot', v:[0, -34] },
+    '.shin-l':  { t:'rot', v:[0, -62] },
+    '.shin-r':  { t:'rot', v:[0, 62] },
+  }},
+  'lunge': { d:1.6, k:{
+    '.body':    { t:'tr', v:['0 0','0 12'] },
+    '.thigh-l': { t:'rot', v:[0, 20] },
+    '.shin-l':  { t:'rot', v:[0, -50] },
+    '.thigh-r': { t:'rot', v:[0, -25] },
+    '.shin-r':  { t:'rot', v:[0, 40] },
+  }},
+  'press': { d:1.3, k:{
+    '.body':   { t:'tr', v:['0 0','0 -2'] },
+    '.arm-l':  { t:'rot', v:[0, 140] },
+    '.fore-l': { t:'rot', v:[0, 32] },
+    '.arm-r':  { t:'rot', v:[0, -140] },
+    '.fore-r': { t:'rot', v:[0, -32] },
+  }},
+  'raise': { d:1.2, k:{
+    '.arm-l':  { t:'rot', v:[0, 52] },
+    '.fore-l': { t:'rot', v:[0, 25] },
+    '.arm-r':  { t:'rot', v:[0, -52] },
+    '.fore-r': { t:'rot', v:[0, -25] },
+  }},
+  'curl': { d:1.1, k:{
+    '.body':   { t:'tr', v:['0 0','0 -2'] },
+    '.fore-l': { t:'rot', v:[0, -130] },
+    '.fore-r': { t:'rot', v:[0, 130] },
+  }},
+  'row': { d:1.2, k:{
+    '.arm-l':  { t:'rot', v:[0, 70] },
+    '.fore-l': { t:'rot', v:[0, -130] },
+    '.arm-r':  { t:'rot', v:[0, -70] },
+    '.fore-r': { t:'rot', v:[0, 130] },
+  }},
+  'calf-raise': { d:0.75, k:{
+    '.body': { t:'tr', v:['0 0','0 -11'] },
+  }},
+  'kickback': { d:1.3, k:{
+    '.body':    { t:'tr', v:['0 0','0 -3'] },
+    '.thigh-r': { t:'rot', v:[0, -50] },
+    '.shin-r':  { t:'rot', v:[0, 50] },
+  }},
+  'hip-opener': { d:1.6, k:{
+    '.body':    { t:'tr', v:['0 0','0 -2'] },
+    '.thigh-l': { t:'rot', v:[0, 65] },
+    '.shin-l':  { t:'rot', v:[0, -60] },
+  }},
+  'high-knees': { d:0.6, k:{
+    '.body':    { t:'tr', v:['0 0','0 -4'] },
+    '.thigh-l': { t:'rot', v:[0, 30] },
+    '.shin-l':  { t:'rot', v:[0, -50] },
+    '.arm-l':   { t:'rot', v:[0, -35] },
+    '.thigh-r': { t:'rot', v:[0, 30], delay:-0.6 },
+    '.shin-r':  { t:'rot', v:[0, -50], delay:-0.6 },
+    '.arm-r':   { t:'rot', v:[0, 35], delay:-0.6 },
+  }},
+  'run': { d:0.5, k:{
+    '.body':    { t:'tr', v:['0 0','0 -4'] },
+    '.thigh-l': { t:'rot', v:[0, 22] },
+    '.shin-l':  { t:'rot', v:[0, -35] },
+    '.arm-l':   { t:'rot', v:[0, -28] },
+    '.thigh-r': { t:'rot', v:[0, 22], delay:-0.5 },
+    '.shin-r':  { t:'rot', v:[0, -35], delay:-0.5 },
+    '.arm-r':   { t:'rot', v:[0, 28], delay:-0.5 },
+  }},
+  'jump-rope': { d:0.4, k:{
+    '.body':   { t:'tr', v:['0 0','0 -7'] },
+    '.thigh-l':{ t:'rot', v:[0, 8] },
+    '.thigh-r':{ t:'rot', v:[0, -8] },
+    '.fore-l': { t:'rot', v:[0, 360], d:0.45, linear:true, alt:false },
+    '.fore-r': { t:'rot', v:[0, -360], d:0.45, linear:true, alt:false },
+  }},
+  'stretch': { d:2, k:{
+    '.upper': { t:'rot', v:[0, 18] },
+    '.arm-l': { t:'rot', v:[0, 120] },
+    '.arm-r': { t:'rot', v:[0, 10] },
+  }},
+  'burpee': { d:2.2, alt:false, k:{
+    '.body':    { t:'tr',  v:['0 0','0 30','0 30','0 -12','0 0'] },
+    '.thigh-l': { t:'rot', v:[0, 34, 34, -4, 0] },
+    '.shin-l':  { t:'rot', v:[0, -62, -62, 0, 0] },
+    '.thigh-r': { t:'rot', v:[0, -34, -34, 4, 0] },
+    '.shin-r':  { t:'rot', v:[0, 62, 62, 0, 0] },
+    '.arm-l':   { t:'rot', v:[0, -30, -30, 150, 0] },
+    '.arm-r':   { t:'rot', v:[0, 30, 30, -150, 0] },
+  }},
+  'pushup': { d:1.5, k:{
+    '.body':   { t:'tr',  v:['0 0','0 16'] },
+    '.arm-l':  { t:'rot', v:[0, 41] },
+    '.fore-l': { t:'rot', v:[0, -93] },
+  }},
+  'plank': { d:3, k:{
+    '.body': { t:'tr', v:['0 0','0 3'] },
+  }},
+  'mountain': { d:0.7, k:{
+    '.body':    { t:'tr',  v:['0 0','0 2'] },
+    '.thigh-l': { t:'rot', v:[0, 85] },
+    '.shin-l':  { t:'rot', v:[0, -45] },
+    '.thigh-r': { t:'rot', v:[0, 85], delay:-0.7 },
+    '.shin-r':  { t:'rot', v:[0, -45], delay:-0.7 },
+  }},
+  'crunch': { d:1.3, k:{
+    '.body':  { t:'tr',  v:['0 0','0 -1'] },
+    '.upper': { t:'rot', v:[0, 30] },
+  }},
+  'leg-raise': { d:1.5, k:{
+    '.thigh-l': { t:'rot', v:[0, -50] },
+    '.shin-l':  { t:'rot', v:[0, -105] },
+    '.thigh-r': { t:'rot', v:[0, -50] },
+    '.shin-r':  { t:'rot', v:[0, -105] },
+  }},
+  'hip-circles': { d:2.4, linear:true, k:{
+    '.body':  { t:'tr',  v:['0 0','6 0','0 0','-6 0','0 0'] },
+    '.upper': { t:'rot', v:[0, -6, 0, 6, 0] },
+  }},
+  'bridge': { d:1.6, k:{
+    '.body': { t:'tr', v:['0 0','0 -14'] },
+  }},
+  'side-leg': { d:1.4, k:{
+    '.body':    { t:'tr',  v:['0 0','-4 0'] },
+    '.thigh-r': { t:'rot', v:[0, -42] },
+  }},
+  'rdl': { d:1.9, k:{
+    '.upper': { t:'rot', v:[0, 62] },
+    '.arm-l': { t:'rot', v:[0, -55] },
+    '.arm-r': { t:'rot', v:[0, 55] },
+  }},
+  'march-up': { d:0.8, k:{
+    '.body':    { t:'tr',  v:['0 0','0 -3'] },
+    '.arm-l':   { t:'rot', v:[0, 150] },
+    '.arm-r':   { t:'rot', v:[0, -150] },
+    '.thigh-l': { t:'rot', v:[0, 30] },
+    '.shin-l':  { t:'rot', v:[0, -45] },
+    '.thigh-r': { t:'rot', v:[0, 30], delay:-0.8 },
+    '.shin-r':  { t:'rot', v:[0, -45], delay:-0.8 },
+  }},
+  'side-step': { d:1.2, k:{
+    '.body':    { t:'tr',  v:['0 0','22 0'] },
+    '.thigh-l': { t:'rot', v:[0, -18] },
+    '.shin-l':  { t:'rot', v:[0, 22] },
+  }},
+  'butt-kick': { d:0.65, k:{
+    '.body':    { t:'tr',  v:['0 0','0 -3'] },
+    '.thigh-l': { t:'rot', v:[0, 22] },
+    '.shin-l':  { t:'rot', v:[0, -115] },
+    '.thigh-r': { t:'rot', v:[0, 22], delay:-0.65 },
+    '.shin-r':  { t:'rot', v:[0, -115], delay:-0.65 },
+  }},
+  'step-fb': { d:1.3, k:{
+    '.body':    { t:'tr',  v:['0 0','0 4'] },
+    '.thigh-l': { t:'rot', v:[0, 32] },
+    '.shin-l':  { t:'rot', v:[0, -32] },
+    '.thigh-r': { t:'rot', v:[0, -22], delay:-1.3 },
+    '.shin-r':  { t:'rot', v:[0, 32], delay:-1.3 },
+  }},
+  'scissor': { d:1, k:{
+    '.thigh-l': { t:'rot', v:[0, 28] },
+    '.shin-l':  { t:'rot', v:[0, 12] },
+    '.thigh-r': { t:'rot', v:[0, -28] },
+    '.shin-r':  { t:'rot', v:[0, -12] },
+  }},
+  'chest-open': { d:1.3, k:{
+    '.arm-l':  { t:'rot', v:[0, -32] },
+    '.fore-l': { t:'rot', v:[0, 62] },
+    '.arm-r':  { t:'rot', v:[0, 32] },
+    '.fore-r': { t:'rot', v:[0, -62] },
+  }},
+  'pullover': { d:1.7, k:{
+    '.upper': { t:'rot', v:[0, -4] },
+    '.arm-l': { t:'rot', v:[150, 55] },
+    '.arm-r': { t:'rot', v:[-150, -55] },
+  }},
+  'triceps-ext': { d:1.5, k:{
+    '.arm-l':  { t:'rot', v:[0, 152] },
+    '.fore-l': { t:'rot', v:[0, -85] },
+    '.arm-r':  { t:'rot', v:[0, -152] },
+    '.fore-r': { t:'rot', v:[0, 85] },
+  }},
+  'dips': { d:1.5, k:{
+    '.body':    { t:'tr',  v:['0 0','0 16'] },
+    '.arm-l':   { t:'rot', v:[0, 28] },
+    '.fore-l':  { t:'rot', v:[0, -55] },
+    '.arm-r':   { t:'rot', v:[0, -28] },
+    '.fore-r':  { t:'rot', v:[0, 55] },
+  }},
+  'stretch-neck': { d:2.6, k:{
+    '.upper': { t:'rot', v:[0, 14] },
+  }},
+  'stretch-arm': { d:2.2, k:{
+    '.arm-l':  { t:'rot', v:[0, 62] },
+    '.fore-l': { t:'rot', v:[0, 95] },
+  }},
+  'stretch-wall': { d:2.2, k:{
+    '.body':  { t:'tr',  v:['0 0','0 3'] },
+    '.upper': { t:'rot', v:[0, 12] },
+    '.arm-l': { t:'rot', v:[0, 120] },
+    '.arm-r': { t:'rot', v:[0, -30] },
+  }},
+  'stretch-back': { d:2.6, k:{
+    '.upper': { t:'rot', v:[0, 52] },
+    '.arm-l': { t:'rot', v:[0, -45] },
+    '.arm-r': { t:'rot', v:[0, 45] },
+  }},
+  'stretch-glute': { d:2.2, k:{
+    '.body':    { t:'tr',  v:['0 0','0 -3'] },
+    '.thigh-l': { t:'rot', v:[0, 55] },
+    '.shin-l':  { t:'rot', v:[0, -45] },
+  }},
+  'stretch-hamstring': { d:2.4, k:{
+    '.upper':   { t:'rot', v:[0, 42] },
+    '.thigh-l': { t:'rot', v:[0, 22] },
+    '.thigh-r': { t:'rot', v:[0, -18] },
+  }},
+  'stretch-quad': { d:2.2, k:{
+    '.body':    { t:'tr',  v:['0 0','0 -2'] },
+    '.thigh-r': { t:'rot', v:[0, -32] },
+    '.shin-r':  { t:'rot', v:[0, 90] },
+  }},
+};
+
+const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function animTag(animName, part){
+  if (REDUCED || !animName) return '';
+  const A = ANIMS[animName];
+  if (!A) return '';
+  const cfg = A.k['.' + part];
+  if (!cfg) return '';
+
+  const dur     = cfg.d ?? A.d ?? 1;
+  const isRot   = cfg.t !== 'tr';
+  const fmt     = v => isRot ? `${v} 0 0` : v;
+  const raw     = cfg.v;
+  const linear  = cfg.linear ?? A.linear;
+
+  let values, keyTimes, keySplines;
+
+  if (A.alt !== false && raw.length === 2){
+    values     = [raw[0], raw[1], raw[0]].map(fmt).join(';');
+    keyTimes   = '0;0.5;1';
+    const s    = linear ? '0 0 1 1' : '0.42 0 0.58 1';
+    keySplines = `${s};${s}`;
+  } else {
+    values     = raw.map(fmt).join(';');
+    keyTimes   = raw.map((_, i) => (i / (raw.length - 1)).toFixed(3)).join(';');
+    const s    = linear ? '0 0 1 1' : '0.42 0 0.58 1';
+    keySplines = Array(Math.max(raw.length - 1, 1)).fill(s).join(';');
+  }
+
+  const begin = cfg.delay ? ` begin="${cfg.delay}s"` : '';
+
+  return `<animateTransform attributeName="transform" type="${isRot ? 'rotate' : 'translate'}" `
+       + `values="${values}" keyTimes="${keyTimes}" keySplines="${keySplines}" `
+       + `calcMode="spline" dur="${dur}s" repeatCount="indefinite"${begin}/>`;
+}
+
+/* =========================================================
+   2. FIGURAS SVG
+   ========================================================= */
+function figStand(anim){
+  const a = p => animTag(anim, p);
+  return `<svg viewBox="0 0 200 200" class="fig" role="img" aria-hidden="true">
+    <line class="ground" x1="22" y1="190" x2="178" y2="190"/>
+    <g class="body">${a('body')}
+      <g transform="translate(100,116)">
+        <g class="upper">${a('upper')}
+          <circle class="head" cx="0" cy="-76" r="13"/>
+          <line class="torso" x1="0" y1="-62" x2="0" y2="2"/>
+          <g transform="translate(0,-50)"><g class="arm-l">${a('arm-l')}
+            <line x1="0" y1="0" x2="-22" y2="28"/>
+            <g transform="translate(-22,28)"><g class="fore-l">${a('fore-l')}
+              <line x1="0" y1="0" x2="-4" y2="28"/>
+            </g></g>
+          </g></g>
+          <g transform="translate(0,-50)"><g class="arm-r">${a('arm-r')}
+            <line x1="0" y1="0" x2="22" y2="28"/>
+            <g transform="translate(22,28)"><g class="fore-r">${a('fore-r')}
+              <line x1="0" y1="0" x2="4" y2="28"/>
+            </g></g>
+          </g></g>
+        </g>
+      </g>
+      <g transform="translate(100,116)"><g class="thigh-l">${a('thigh-l')}
+        <line x1="0" y1="0" x2="-12" y2="34"/>
+        <g transform="translate(-12,34)"><g class="shin-l">${a('shin-l')}
+          <line x1="0" y1="0" x2="-2" y2="36"/>
+        </g></g>
+      </g></g>
+      <g transform="translate(100,116)"><g class="thigh-r">${a('thigh-r')}
+        <line x1="0" y1="0" x2="12" y2="34"/>
+        <g transform="translate(12,34)"><g class="shin-r">${a('shin-r')}
+          <line x1="0" y1="0" x2="2" y2="36"/>
+        </g></g>
+      </g></g>
+    </g>
+  </svg>`;
+}
+
+function figProne(anim){
+  const a = p => animTag(anim, p);
+  return `<svg viewBox="0 0 200 200" class="fig" role="img" aria-hidden="true">
+    <line class="ground" x1="18" y1="168" x2="182" y2="168"/>
+    <g class="body">${a('body')}
+      <circle class="head" cx="156" cy="98" r="13"/>
+      <line class="torso" x1="145" y1="112" x2="95" y2="130"/>
+      <g transform="translate(145,112)"><g class="arm-l">${a('arm-l')}
+        <line x1="0" y1="0" x2="3" y2="28"/>
+        <g transform="translate(3,28)"><g class="fore-l">${a('fore-l')}
+          <line x1="0" y1="0" x2="2" y2="25"/>
+        </g></g>
+      </g></g>
+      <g transform="translate(95,130)"><g class="thigh-l">${a('thigh-l')}
+        <line x1="0" y1="0" x2="-40" y2="15"/>
+        <g transform="translate(-40,15)"><g class="shin-l">${a('shin-l')}
+          <line x1="0" y1="0" x2="-27" y2="22"/>
+        </g></g>
+      </g></g>
+      <g transform="translate(95,133)"><g class="thigh-r">${a('thigh-r')}
+        <line x1="0" y1="0" x2="-38" y2="16"/>
+        <g transform="translate(-38,16)"><g class="shin-r">${a('shin-r')}
+          <line x1="0" y1="0" x2="-27" y2="21"/>
+        </g></g>
+      </g></g>
+    </g>
+  </svg>`;
+}
+
+function figSupine(anim){
+  const a = p => animTag(anim, p);
+  return `<svg viewBox="0 0 200 200" class="fig" role="img" aria-hidden="true">
+    <line class="ground" x1="18" y1="152" x2="182" y2="152"/>
+    <g class="body">${a('body')}
+      <g transform="translate(120,140)">
+        <g class="upper">${a('upper')}
+          <circle class="head" cx="-72" cy="-2" r="13"/>
+          <line class="torso" x1="-60" y1="-2" x2="0" y2="0"/>
+          <g transform="translate(-58,-2)"><g class="arm-l">${a('arm-l')}
+            <line x1="0" y1="0" x2="-16" y2="8"/>
+          </g></g>
+        </g>
+      </g>
+      <g transform="translate(120,140)"><g class="thigh-l">${a('thigh-l')}
+        <line x1="0" y1="0" x2="32" y2="-30"/>
+        <g transform="translate(32,-30)"><g class="shin-l">${a('shin-l')}
+          <line x1="0" y1="0" x2="20" y2="40"/>
+        </g></g>
+      </g></g>
+      <g transform="translate(120,142)"><g class="thigh-r">${a('thigh-r')}
+        <line x1="0" y1="0" x2="34" y2="-29"/>
+        <g transform="translate(34,-29)"><g class="shin-r">${a('shin-r')}
+          <line x1="0" y1="0" x2="20" y2="38"/>
+        </g></g>
+      </g></g>
+    </g>
+  </svg>`;
+}
+
+const FIG = { stand: figStand, prone: figProne, supine: figSupine };
+
+/* =========================================================
+   3. PLAN SEMANAL
+   ========================================================= */
+const PLAN = [
+{
+  key:'lun', name:'Lunes', focus:'Cuádriceps · Glúteo · Isquios · Core',
+  warm:[
+    {n:'Marcha en el lugar', a:'run', p:'stand', s:'1 × 45 s', r:'10 s', d:'Mueve los brazos a la par de las piernas. Empieza con un ritmo suave y sube progresivamente.', v:'https://www.lyfta.app/exercise/place-jog-6r2'},
+    {n:'Sentadilla sin peso', a:'squat', p:'stand', s:'1 × 45 s', r:'10 s', d:'Baja lento con el pecho arriba y los talones apoyados. Sube apretando los glúteos al final.'},
+    {n:'Zancadas alternas sin peso', a:'lunge', p:'stand', s:'1 × 45 s', r:'10 s', d:'Da un paso al frente controlado, baja la rodilla trasera y vuelve a la posición inicial alternando piernas.'},
+    {n:'Elevaciones de rodilla', a:'high-knees', p:'stand', s:'1 × 45 s', r:'10 s', d:'Sube la rodilla a la altura de la cadera de forma alterna. Mantén el abdomen firme y los hombros relajados.'},
+    {n:'Círculos de cadera', a:'hip-circles', p:'stand', s:'1 × 45 s', r:'10 s', d:'Con las manos en la cintura, dibuja círculos amplios con la cadera. Alterna el sentido a mitad del tiempo.'},
+    {n:'Puentes de glúteo sin peso', a:'bridge', p:'supine', s:'1 × 45 s', r:'10 s', d:'Tumbado boca arriba con rodillas flexionadas, sube la cadera apretando los glúteos y baja controlando.'},
+    {n:'Abducciones de cadera', a:'side-leg', p:'stand', s:'1 × 45 s', r:'10 s', d:'De pie, abre una pierna hacia el lado manteniéndola recta. Alterna las piernas sin balancear el tronco.'}
+  ],
+  main:[
+    {n:'Sentadilla con mancuerna', a:'squat', p:'stand', s:'2-3 × 10', r:'60-90 s', d:'Sostén la mancuerna al pecho. Baja hasta que los muslos queden paralelos al suelo y sube sin perder la postura.'},
+    {n:'Zancadas caminando', a:'lunge', p:'stand', s:'2-3 × 10 por pierna', r:'60-90 s', d:'Da un paso al frente, baja la rodilla trasera y avanza con la otra pierna. Mantén el torso erguido y la mirada al frente.'},
+    {n:'Peso muerto rumano con mancuernas', a:'rdl', p:'stand', s:'2-3 × 10', r:'60-90 s', d:'Con las mancuernas frente a los muslos, empuja la cadera hacia atrás manteniendo la espalda recta. Baja hasta sentir el estirón en los isquios y sube apretando glúteos.'},
+    {n:'Puente de glúteos con peso', a:'bridge', p:'supine', s:'2-3 × 12', r:'60-90 s', d:'Con una mancuerna sobre la cadera, sube apretando los glúteos y baja sin apoyar del todo. Mantén los pies planos.'},
+    {n:'Sentadilla sumo', a:'squat', p:'stand', s:'2-3 × 12', r:'60-90 s', d:'Pies más anchos que los hombros y puntas hacia afuera. Baja recto con el pecho arriba y empuja con los talones.'},
+    {n:'Abducciones con banda', a:'side-leg', p:'stand', s:'2 × 15', r:'60-90 s', d:'Banda por encima de las rodillas. Abre la pierna hacia el lado y mantén 1 segundo arriba antes de volver controlando.'},
+    {n:'Abdominales', a:'crunch', p:'supine', s:'2 × 12-15', r:'45-60 s', d:'Manos en las sienes sin tirar del cuello. Sube el tronco con el abdomen y baja despacio sintiendo la contracción.'},
+    {n:'Elevaciones de piernas', a:'leg-raise', p:'supine', s:'2 × 10-12', r:'45-60 s', d:'Tumbado boca arriba, sube las piernas rectas sin despegar la lumbar del suelo. Baja sin tocar el piso.'},
+    {n:'Plancha', a:'plank', p:'prone', s:'2 × 20-30 s', r:'45-60 s', d:'Cuerpo en línea recta, aprieta el abdomen y los glúteos. No dejes caer la cadera ni subas los glúteos.'}
+  ],
+  cardio:[]
+},
+{
+  key:'mar', name:'Martes', focus:'Cardio · Core · Movilidad',
+  warm:[
+    {n:'Marcha en el lugar', a:'run', p:'stand', s:'1 × 45 s', r:'10 s', d:'Mueve los brazos a la par de las piernas. Empieza con un ritmo suave y sube progresivamente.', v:'https://www.lyfta.app/exercise/place-jog-6r2'}
+  ],
+  main:[
+    {n:'Marcha rápida con brazos arriba', a:'march-up', p:'stand', s:'2-3 × 40 s', r:'20 s', d:'Camina en el sitio elevando los brazos por encima de la cabeza a la par del movimiento. Activa todo el cuerpo.', v:'https://youtube.com/shorts/DCpBHpjH6WQ'},
+    {n:'Paso lateral', a:'side-step', p:'stand', s:'2-3 × 40 s', r:'20 s', d:'Da pasos laterales alternos manteniendo las rodillas ligeramente flexionadas. Mantén el tronco estable.', v:'https://youtube.com/shorts/4dU3maseVg0'},
+    {n:'Rodillas arriba sin saltar', a:'high-knees', p:'stand', s:'2-3 × 40 s', r:'20 s', d:'Sube las rodillas a la altura de la cadera sin saltar. Apoya con suavidad y mantén un ritmo constante.', v:'https://www.youtube.com/watch?v=j8XGysKsPFc'},
+    {n:'Talones al glúteo sin saltar', a:'butt-kick', p:'stand', s:'2-3 × 40 s', r:'20 s', d:'Lleva los talones hacia los glúteos de forma alterna sin saltar. Mantén los muslos casi perpendiculares al suelo.', v:'https://youtu.be/KaxCp1K3-lQ'},
+    {n:'Paso adelante y atrás', a:'step-fb', p:'stand', s:'2-3 × 40 s', r:'20 s', d:'Alterna pasos al frente y atrás manteniendo el equilibrio. Coordina con el movimiento de brazos.', v:'https://media.physitrack.com/exercises/ab66384b-7561-41a6-ad5a-da7c4a55eaf8/es/video_720p.mp4'},
+    {n:'Caminata suave + respiración profunda', a:'run', p:'stand', s:'1 × 5 min', r:'continuo', d:'Camina a ritmo cómodo y respira profundo por la nariz, exhalando por la boca. Baja las pulsaciones.'},
+    {n:'Plancha', a:'plank', p:'prone', s:'2 × 20-30 s', r:'45-60 s', d:'Cuerpo en línea recta, aprieta el abdomen y los glúteos. No dejes caer la cadera.'},
+    {n:'Crunch con rodillas apoyadas', a:'crunch', p:'supine', s:'2 × 12-15', r:'45-60 s', d:'Rodillas flexionadas y apoyadas. Sube el tronco con el abdomen y baja sin tirar del cuello.', v:'<blockquote class="tiktok-embed" cite="https://www.tiktok.com/@deportikaonline/video/7190081179494763781" data-video-id="7190081179494763781" style="max-width: 605px;min-width: 325px;" > <section> <a target="_blank" title="@deportikaonline" href="https://www.tiktok.com/@deportikaonline?refer=embed">@deportikaonline</a> Crunch con liga <a title="abs" target="_blank" href="https://www.tiktok.com/tag/abs?refer=embed">#abs</a> <a title="abdominales" target="_blank" href="https://www.tiktok.com/tag/abdominales?refer=embed">#abdominales</a> <a title="sabiasque" target="_blank" href="https://www.tiktok.com/tag/sabiasque?refer=embed">#SabiasQue</a> <a title="fitness" target="_blank" href="https://www.tiktok.com/tag/fitness?refer=embed">#fitness</a> <a title="crunch" target="_blank" href="https://www.tiktok.com/tag/crunch?refer=embed">#crunch</a> <a title="deportika" target="_blank" href="https://www.tiktok.com/tag/deportika?refer=embed">#deportika</a> <a target="_blank" title="♬ Aesthetic - Tollan Kim" href="https://www.tiktok.com/music/Aesthetic-7072513628145977346?refer=embed">♬ Aesthetic - Tollan Kim</a> </section> </blockquote>'},
+    {n:'Tijeras abdominales', a:'scissor', p:'supine', s:'2 × 12-15', r:'45-60 s', d:'Tumbado boca arriba, sube ligeramente las piernas y cruza una sobre otra alternando. Mantén la lumbar pegada al suelo.', v:'https://youtu.be/LS2WgqLb_Kk'},
+    {n:'Estiramiento de cuello', a:'stretch-neck', p:'stand', s:'1 × 20-30 s', r:'continuo', d:'Inclina la cabeza hacia un lado llevando la oreja al hombro. Mantén sin forzar y cambia de lado.'},
+    {n:'Estiramiento de hombros', a:'stretch-arm', p:'stand', s:'1 × 20-30 s', r:'continuo', d:'Lleva un brazo cruzado frente al pecho y ayúdate con el otro. Cambia de lado al terminar.'},
+    {n:'Estiramiento de brazos en pared', a:'stretch-wall', p:'stand', s:'1 × 20-30 s', r:'continuo', d:'Apoya la palma en la pared a la altura del hombro y gira el tronco hacia el lado opuesto. Cambia de brazo.'},
+    {n:'Estiramiento de espalda', a:'stretch-back', p:'stand', s:'1 × 20-30 s', r:'continuo', d:'Flexiona el tronco hacia delante dejando caer los brazos. Relaja la espalda y respira profundo.'},
+    {n:'Estiramiento de glúteos', a:'stretch-glute', p:'stand', s:'1 × 20-30 s', r:'continuo', d:'Sube una rodilla y abrázala contra el pecho. Mantén la espalda recta y cambia de pierna.'},
+    {n:'Estiramiento de isquiotibiales', a:'stretch-hamstring', p:'stand', s:'1 × 20-30 s', r:'continuo', d:'Extiende una pierna al frente y lleva el tronco hacia ella con la espalda recta. Cambia de pierna.'},
+    {n:'Estiramiento de cuádriceps', a:'stretch-quad', p:'stand', s:'1 × 20-30 s', r:'continuo', d:'Flexiona una rodilla y lleva el talón al glúteo sujetándolo con la mano. Cambia de pierna.'}
+  ],
+  cardio:[]
+},
+{
+  key:'mie', name:'Miércoles', focus:'Descanso', rest:true, warm:[], main:[], cardio:[]
+},
+{
+  key:'jue', name:'Jueves', focus:'Cardio · Core · Movilidad',
+  warm:[
+    {n:'Marcha en el lugar', a:'run', p:'stand', s:'1 × 45 s', r:'10 s', d:'Mueve los brazos a la par de las piernas. Empieza con un ritmo suave y sube progresivamente.', v:'https://www.lyfta.app/exercise/place-jog-6r2'}
+  ],
+  main:[
+    {n:'Marcha rápida con brazos arriba', a:'march-up', p:'stand', s:'2-3 × 40 s', r:'20 s', d:'Camina en el sitio elevando los brazos por encima de la cabeza a la par del movimiento. Activa todo el cuerpo.', v:'https://youtube.com/shorts/DCpBHpjH6WQ'},
+    {n:'Paso lateral', a:'side-step', p:'stand', s:'2-3 × 40 s', r:'20 s', d:'Da pasos laterales alternos manteniendo las rodillas ligeramente flexionadas. Mantén el tronco estable.', v:'https://youtube.com/shorts/4dU3maseVg0'},
+    {n:'Rodillas arriba sin saltar', a:'high-knees', p:'stand', s:'2-3 × 40 s', r:'20 s', d:'Sube las rodillas a la altura de la cadera sin saltar. Apoya con suavidad y mantén un ritmo constante.', v:'https://www.youtube.com/watch?v=j8XGysKsPFc'},
+    {n:'Talones al glúteo sin saltar', a:'butt-kick', p:'stand', s:'2-3 × 40 s', r:'20 s', d:'Lleva los talones hacia los glúteos de forma alterna sin saltar. Mantén los muslos casi perpendiculares al suelo.', v:'https://youtu.be/KaxCp1K3-lQ'},
+    {n:'Paso adelante y atrás', a:'step-fb', p:'stand', s:'2-3 × 40 s', r:'20 s', d:'Alterna pasos al frente y atrás manteniendo el equilibrio. Coordina con el movimiento de brazos.', v:'https://media.physitrack.com/exercises/ab66384b-7561-41a6-ad5a-da7c4a55eaf8/es/video_720p.mp4'},
+    {n:'Caminata suave + respiración profunda', a:'run', p:'stand', s:'1 × 5 min', r:'continuo', d:'Camina a ritmo cómodo y respira profundo por la nariz, exhalando por la boca. Baja las pulsaciones.'},
+    {n:'Plancha', a:'plank', p:'prone', s:'2 × 20-30 s', r:'45-60 s', d:'Cuerpo en línea recta, aprieta el abdomen y los glúteos. No dejes caer la cadera.'},
+    {n:'Crunch con rodillas apoyadas', a:'crunch', p:'supine', s:'2 × 12-15', r:'45-60 s', d:'Rodillas flexionadas y apoyadas. Sube el tronco con el abdomen y baja sin tirar del cuello.', v:'<blockquote class="tiktok-embed" cite="https://www.tiktok.com/@deportikaonline/video/7190081179494763781" data-video-id="7190081179494763781" style="max-width: 605px;min-width: 325px;" > <section> <a target="_blank" title="@deportikaonline" href="https://www.tiktok.com/@deportikaonline?refer=embed">@deportikaonline</a> Crunch con liga <a title="abs" target="_blank" href="https://www.tiktok.com/tag/abs?refer=embed">#abs</a> <a title="abdominales" target="_blank" href="https://www.tiktok.com/tag/abdominales?refer=embed">#abdominales</a> <a title="sabiasque" target="_blank" href="https://www.tiktok.com/tag/sabiasque?refer=embed">#SabiasQue</a> <a title="fitness" target="_blank" href="https://www.tiktok.com/tag/fitness?refer=embed">#fitness</a> <a title="crunch" target="_blank" href="https://www.tiktok.com/tag/crunch?refer=embed">#crunch</a> <a title="deportika" target="_blank" href="https://www.tiktok.com/tag/deportika?refer=embed">#deportika</a> <a target="_blank" title="♬ Aesthetic - Tollan Kim" href="https://www.tiktok.com/music/Aesthetic-7072513628145977346?refer=embed">♬ Aesthetic - Tollan Kim</a> </section> </blockquote>'},
+    {n:'Tijeras abdominales', a:'scissor', p:'supine', s:'2 × 12-15', r:'45-60 s', d:'Tumbado boca arriba, sube ligeramente las piernas y cruza una sobre otra alternando. Mantén la lumbar pegada al suelo.', v:'https://youtu.be/LS2WgqLb_Kk'},
+    {n:'Estiramiento de cuello', a:'stretch-neck', p:'stand', s:'1 × 20-30 s', r:'continuo', d:'Inclina la cabeza hacia un lado llevando la oreja al hombro. Mantén sin forzar y cambia de lado.'},
+    {n:'Estiramiento de hombros', a:'stretch-arm', p:'stand', s:'1 × 20-30 s', r:'continuo', d:'Lleva un brazo cruzado frente al pecho y ayúdate con el otro. Cambia de lado al terminar.'},
+    {n:'Estiramiento de brazos en pared', a:'stretch-wall', p:'stand', s:'1 × 20-30 s', r:'continuo', d:'Apoya la palma en la pared a la altura del hombro y gira el tronco hacia el lado opuesto. Cambia de brazo.'},
+    {n:'Estiramiento de espalda', a:'stretch-back', p:'stand', s:'1 × 20-30 s', r:'continuo', d:'Flexiona el tronco hacia delante dejando caer los brazos. Relaja la espalda y respira profundo.'},
+    {n:'Estiramiento de glúteos', a:'stretch-glute', p:'stand', s:'1 × 20-30 s', r:'continuo', d:'Sube una rodilla y abrázala contra el pecho. Mantén la espalda recta y cambia de pierna.'},
+    {n:'Estiramiento de isquiotibiales', a:'stretch-hamstring', p:'stand', s:'1 × 20-30 s', r:'continuo', d:'Extiende una pierna al frente y lleva el tronco hacia ella con la espalda recta. Cambia de pierna.'},
+    {n:'Estiramiento de cuádriceps', a:'stretch-quad', p:'stand', s:'1 × 20-30 s', r:'continuo', d:'Flexiona una rodilla y lleva el talón al glúteo sujetándolo con la mano. Cambia de pierna.'}
+  ],
+  cardio:[]
+},
+{
+  key:'vie', name:'Viernes', focus:'Fuerza · Tren superior + Core',
+  warm:[
+    {n:'Marcha en el lugar', a:'run', p:'stand', s:'1 × 45 s', r:'10 s', d:'Mueve los brazos a la par de las piernas. Empieza con un ritmo suave y sube progresivamente.', v:'https://www.lyfta.app/exercise/place-jog-6r2'},
+    {n:'Círculos de brazos adelante', a:'arm-circles', p:'stand', s:'1 × 45 s', r:'10 s', d:'Brazos extendidos a la altura de los hombros. Dibuja círculos amplios hacia delante.'},
+    {n:'Círculos de brazos atrás', a:'arm-circles', p:'stand', s:'1 × 45 s', r:'10 s', d:'Mismos círculos amplios pero hacia atrás. Abre bien el pecho y los hombros.'},
+    {n:'Apertura y cierre de brazos', a:'chest-open', p:'stand', s:'1 × 45 s', r:'10 s', d:'Con los codos a la altura del pecho, abre los brazos hacia atrás y ciérralos al frente. Aprieta los omóplatos al abrir.'},
+    {n:'Rotaciones de torso', a:'twist', p:'stand', s:'1 × 45 s', r:'10 s', d:'Pies al ancho de hombros y rodillas suaves. Gira el tronco de lado a lado sin mover la cadera.'},
+    {n:'Remo sin peso', a:'row', p:'stand', s:'1 × 45 s', r:'10 s', d:'Tronco ligeramente inclinado. Lleva los codos hacia atrás y junta los omóplatos en cada repetición.'},
+    {n:'Elevaciones de brazos', a:'raise', p:'stand', s:'1 × 45 s', r:'10 s', d:'Brazos casi rectos a los lados. Sube hasta la altura de los hombros y baja controlando.'}
+  ],
+  main:[
+    {n:'Remo con mancuerna (una mano)', a:'row', p:'stand', s:'2-3 × 10 por lado', r:'60-90 s', d:'Apoya una rodilla y una mano en una silla. Con la otra mano, tira de la mancuerna hacia la cadera manteniendo la espalda recta.'},
+    {n:'Remo con mancuernas a dos manos', a:'row', p:'stand', s:'2-3 × 10', r:'60-90 s', d:'Tronco inclinado y mancuernas colgando. Lleva los codos hacia atrás y junta los omóplatos arriba.'},
+    {n:'Pullover con banda de pie', a:'pullover', p:'stand', s:'2-3 × 12', r:'60-90 s', d:'Banda anclada arriba. Con los brazos extendidos, baja la banda desde arriba hacia el pecho y vuelve controlando.'},
+    {n:'Aperturas posteriores con mancuernas', a:'raise', p:'stand', s:'2-3 × 12', r:'60-90 s', d:'Torso inclinado. Abre los brazos hacia los lados con los codos ligeramente flexionados, apretando la espalda alta.'},
+    {n:'Press de hombros con mancuernas (sentado)', a:'press', p:'stand', s:'2-3 × 10', r:'60-90 s', d:'Sentado en una silla con la espalda apoyada. Sube las mancuernas por encima de la cabeza sin bloquear los codos.'},
+    {n:'Elevaciones laterales', a:'raise', p:'stand', s:'2-3 × 12', r:'60-90 s', d:'Codos ligeramente flexionados. Sube los brazos hasta la altura de los hombros y baja controlando.'},
+    {n:'Press de pecho en suelo con mancuernas', a:'pushup', p:'prone', s:'2-3 × 10', r:'60-90 s', d:'Acostado en el suelo con mancuernas a la altura del pecho. Empuja hacia arriba sin bloquear del todo los codos.'},
+    {n:'Flexiones inclinadas (manos en silla)', a:'pushup', p:'prone', s:'2-3 × 8-10', r:'60-90 s', d:'Manos apoyadas en una silla y cuerpo recto. Baja el pecho hacia la silla y empuja para subir.'},
+    {n:'Curl de bíceps con mancuernas', a:'curl', p:'stand', s:'2-3 × 10', r:'60-90 s', d:'Codos pegados al cuerpo. Sube solo con la fuerza del bíceps y baja controlando la bajada.'},
+    {n:'Curl martillo', a:'curl', p:'stand', s:'2-3 × 10', r:'60-90 s', d:'Agarre neutro (palmas enfrentadas). Alterna los brazos subiendo una mancuerna a la vez sin balancearte.'},
+    {n:'Extensión de tríceps sobre cabeza', a:'triceps-ext', p:'stand', s:'2-3 × 10', r:'60-90 s', d:'Sostén una mancuerna con ambas manos por encima de la cabeza. Baja doblando los codos y sube extendiendo.'},
+    {n:'Fondos entre dos sillas', a:'dips', p:'stand', s:'2-3 × 8-10', r:'60-90 s', d:'Manos en el borde de dos sillas, cuerpo suspendido. Baja doblando los codos hacia atrás y sube empujando.'},
+    {n:'Crunch con rodillas apoyadas', a:'crunch', p:'supine', s:'2 × 12-15', r:'45-60 s', d:'Rodillas flexionadas y apoyadas. Sube el tronco con el abdomen y baja sin tirar del cuello.'},
+    {n:'Tijeras abdominales', a:'scissor', p:'supine', s:'2 × 12-15', r:'45-60 s', d:'Tumbado boca arriba, sube ligeramente las piernas y cruza una sobre otra alternando. Mantén la lumbar pegada.'},
+    {n:'Plancha', a:'plank', p:'prone', s:'2 × 20-30 s', r:'45-60 s', d:'Cuerpo en línea recta, aprieta el abdomen y los glúteos. No dejes caer la cadera.'}
+  ],
+  cardio:[]
+},
+{
+  key:'sab', name:'Sábado', focus:'Cardio suave',
+  warm:[],
+  main:[
+    {n:'Cardio suave (caminata rápida)', a:'run', p:'stand', s:'20-30 min', r:'continuo', d:'Caminata rápida al aire libre o en casa. Mantén un ritmo que te permita hablar sin quedarte sin aire.'},
+    {n:'Estiramiento de cuello', a:'stretch-neck', p:'stand', s:'1 × 20-30 s', r:'continuo', d:'Inclina la cabeza hacia un lado llevando la oreja al hombro. Mantén sin forzar y cambia de lado.'},
+    {n:'Estiramiento de hombros', a:'stretch-arm', p:'stand', s:'1 × 20-30 s', r:'continuo', d:'Lleva un brazo cruzado frente al pecho y ayúdate con el otro. Cambia de lado al terminar.'},
+    {n:'Estiramiento de brazos en pared', a:'stretch-wall', p:'stand', s:'1 × 20-30 s', r:'continuo', d:'Apoya la palma en la pared a la altura del hombro y gira el tronco hacia el lado opuesto. Cambia de brazo.'},
+    {n:'Estiramiento de espalda', a:'stretch-back', p:'stand', s:'1 × 20-30 s', r:'continuo', d:'Flexiona el tronco hacia delante dejando caer los brazos. Relaja la espalda y respira profundo.'},
+    {n:'Estiramiento de glúteos', a:'stretch-glute', p:'stand', s:'1 × 20-30 s', r:'continuo', d:'Sube una rodilla y abrázala contra el pecho. Mantén la espalda recta y cambia de pierna.'},
+    {n:'Estiramiento de isquiotibiales', a:'stretch-hamstring', p:'stand', s:'1 × 20-30 s', r:'continuo', d:'Extiende una pierna al frente y lleva el tronco hacia ella con la espalda recta. Cambia de pierna.'},
+    {n:'Estiramiento de cuádriceps', a:'stretch-quad', p:'stand', s:'1 × 20-30 s', r:'continuo', d:'Flexiona una rodilla y lleva el talón al glúteo sujetándolo con la mano. Cambia de pierna.'}
+  ],
+  cardio:[]
+},
+{
+  key:'dom', name:'Domingo', focus:'Descanso', rest:true, warm:[], main:[], cardio:[]
+}
+];
+
+/* =========================================================
+   4. ESTADO
+   ========================================================= */
+const STORE_KEY = 'fitplan.v3';
+let done = {};
+try { done = JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; } catch(e){ done = {}; }
+
+function save(){
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(done)); } catch(e){}
+}
+
+const todayIdx = (new Date().getDay() + 6) % 7;
+let currentDay = todayIdx;
+
+const BLOCKS = [
+  { key:'warm',   label:'Calentamiento',    tag:'Inicio', tagCls:'warm',   cls:'warm' },
+  { key:'main',   label:'Rutina principal', tag:'Rutina', tagCls:'main',   cls:'main' },
+  { key:'cardio', label:'Cardio final',     tag:'Final',  tagCls:'cardio', cls:'cardio' }
+];
+
+function idsOf(day){
+  const list = [];
+  if (day.rest) return list;
+  BLOCKS.forEach(b => {
+    (day[b.key] || []).forEach((_, i) => list.push(`${day.key}-${b.key}-${i}`));
+  });
+  return list;
+}
+function dayProgress(day){
+  const ids = idsOf(day);
+  const c = ids.filter(id => done[id]).length;
+  return { done:c, total:ids.length };
+}
+function globalProgress(){
+  let d = 0, t = 0;
+  PLAN.forEach(day => { const p = dayProgress(day); d += p.done; t += p.total; });
+  return { d, t };
+}
+
+/* =========================================================
+   5. RENDER
+   ========================================================= */
+const $days = document.getElementById('days');
+const $main = document.getElementById('main');
+const $gBar = document.getElementById('gBar');
+const $gText = document.getElementById('gText');
+
+function renderTabs(){
+  $days.innerHTML = PLAN.map((day, i) => {
+    const p = dayProgress(day);
+    let cls = '';
+    if (!day.rest){
+      if (p.done > 0 && p.done < p.total) cls = 'partial';
+      if (p.done === p.total && p.total > 0) cls = 'full';
+    }
+    return `<button class="day-btn ${i === currentDay ? 'active' : ''} ${cls}"
+              role="tab" aria-selected="${i === currentDay}"
+              data-idx="${i}">${day.name}<span class="dot"></span></button>`;
+  }).join('');
+}
+
+function renderMain(){
+  const day = PLAN[currentDay];
+
+  if (day.rest){
+    $main.innerHTML = `
+      <section class="day-head">
+        <div>
+          <h1>${day.name}</h1>
+          <p>${day.focus}</p>
+        </div>
+      </section>
+      <div class="rest-card">
+        <div class="icon">🌙</div>
+        <h2>Día de descanso</h2>
+        <p>Hoy toca recuperar. Duerme bien, hidrátate y aprovecha para estirar suavemente si lo necesitas. El descanso también es parte del entrenamiento.</p>
+      </div>`;
+    return;
+  }
+
+  const p = dayProgress(day);
+  const hasAny = (day.warm?.length || day.main?.length || day.cardio?.length);
+
+  let html = `
+    <section class="day-head">
+      <div>
+        <h1>${day.name}</h1>
+        <p>${day.focus}</p>
+      </div>
+      ${hasAny ? `
+      <div class="day-progress">
+        <div class="track"><div style="width:${p.total ? (p.done / p.total * 100) : 0}%"></div></div>
+        <small>${p.done} de ${p.total} ejercicios completados</small>
+      </div>
+      <button class="reset" id="resetDay" type="button">Reiniciar día</button>` : ''}
+    </section>
+  `;
+
+  BLOCKS.forEach(block => {
+    const list = day[block.key] || [];
+    if (!list.length) return;
+    html += `
+      <section class="block">
+        <div class="block-head">
+          <span class="tag ${block.tagCls}">${block.tag}</span>
+          <h2>${block.label}</h2>
+          <span class="count">${list.length} ejercicio${list.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div class="grid">
+          ${list.map((ex, i) => {
+            const id = `${day.key}-${block.key}-${i}`;
+            const isDone = !!done[id];
+            return `
+              <article class="ex ${isDone ? 'done' : ''}" data-id="${id}">
+                <div class="visual ${block.cls}">
+                  ${FIG[ex.p || 'stand'](ex.a)}
+                </div>
+                <div class="info">
+                  <h3>${ex.n}</h3>
+                  <div class="meta">
+                    <span>${ex.s}</span>
+                    <span>${ex.r}</span>
+                    ${ex.v ? `<button class="video-btn" type="button"
+                                data-video="${encodeURIComponent(ex.v)}"
+                                data-title="${ex.n}"
+                                aria-label="Ver tutorial de ${ex.n}">▶ Tutorial</button>` : ''}
+                  </div>
+                  <p class="desc">${ex.d}</p>
+                </div>
+                <button class="check" type="button"
+                        aria-label="Marcar ${ex.n} como completado"
+                        aria-pressed="${isDone}">✓</button>
+              </article>`;
+          }).join('')}
+        </div>
+      </section>`;
+  });
+
+  $main.innerHTML = html;
+}
+
+function renderGlobal(){
+  const g = globalProgress();
+  $gBar.style.width = (g.t ? (g.d / g.t * 100) : 0) + '%';
+  $gText.textContent = `${g.d} / ${g.t} completados`;
+}
+
+function renderAll(){
+  renderTabs();
+  renderMain();
+  renderGlobal();
+}
+
+/* =========================================================
+   6. MODAL DE VIDEO
+   ========================================================= */
+const $modal      = document.getElementById('modal');
+const $modalBody  = document.getElementById('modalBody');
+const $modalTitle = document.getElementById('modalTitle');
+const $modalClose = document.getElementById('modalClose');
+
+/* Extrae una URL limpia desde:
+   - una URL directa
+   - un <blockquote cite="..."> de TikTok
+   - un <iframe src="..."> de Facebook/Instagram
+   - un <a href="..."> dentro de HTML embebido */
+function extractUrl(input){
+  if (!input) return '';
+  const str = String(input).trim();
+  if (!str) return '';
+
+  // HTML embebido (TikTok blockquote, iframe, etc.)
+  if (/<[a-z][\s\S]*>/i.test(str)){
+    // 1) cite="..." (TikTok / blockquotes)
+    const cite = str.match(/cite=["']([^"']+)["']/i);
+    if (cite) return cite[1].trim();
+    // 2) iframe src="..."
+    const iframe = str.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+    if (iframe) return iframe[1].trim();
+    // 3) cualquier href="..."
+    const href = str.match(/href=["']([^"']+)["']/i);
+    if (href) return href[1].trim();
+    // 4) primer https://... dentro del HTML
+    const anyUrl = str.match(/https?:\/\/[^\s"'<>]+/i);
+    if (anyUrl) return anyUrl[0];
+  }
+
+  return str;
+}
+
+function classifyVideo(raw){
+  const url = extractUrl(raw);
+  if (!url) return { type:'none' };
+
+  // YouTube (watch, shorts, embed, youtu.be)
+  const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  if (yt) return { type:'iframe', src:`https://www.youtube.com/embed/${yt[1]}` };
+
+  // Vimeo
+  const vm = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (vm) return { type:'iframe', src:`https://player.vimeo.com/video/${vm[1]}` };
+
+  // TikTok (embed v2)
+  const tt = url.match(/tiktok\.com\/@[^\/]+\/video\/(\d+)/);
+  if (tt) return { type:'iframe', src:`https://www.tiktok.com/embed/v2/${tt[1]}` };
+
+  // Facebook (video o post)
+  if (/(facebook\.com|fb\.watch)/i.test(url)){
+    return { type:'iframe',
+      src:`https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false&width=734` };
+  }
+
+  // Instagram (post, reel, tv)
+  const ig = url.match(/instagram\.com\/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/);
+  if (ig) return { type:'iframe', src:`https://www.instagram.com/p/${ig[1]}/embed` };
+
+  // Video directo
+  if (/\.(mp4|webm|ogg)(\?|$)/i.test(url)) return { type:'video', src:url };
+
+  // GIF
+  if (/\.gif(\?|$)/i.test(url)) return { type:'img', src:url };
+
+  // Fallback: abrir en pestaña nueva
+  return { type:'link', src:url };
+}
+
+function openModal(rawUrl, title){
+  const url = decodeURIComponent(rawUrl || '');
+  const info = classifyVideo(url);
+  $modalTitle.textContent = title || 'Tutorial';
+  let inner = '';
+
+  if (info.type === 'iframe'){
+    inner = `<iframe src="${info.src}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>`;
+  } else if (info.type === 'img'){
+    inner = `<img src="${info.src}" alt="${title || 'Tutorial'}">`;
+  } else if (info.type === 'video'){
+    inner = `<video src="${info.src}" controls autoplay playsinline></video>`;
+  } else {
+    inner = `<div class="fallback">
+      Este enlace se abrirá en una pestaña nueva.<br><br>
+      <a href="${info.src}" target="_blank" rel="noopener">Abrir tutorial ↗</a>
+    </div>`;
+    setTimeout(() => window.open(info.src, '_blank', 'noopener'), 200);
+  }
+
+  $modalBody.innerHTML = inner;
+  $modal.classList.add('open');
+  $modal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(){
+  $modal.classList.remove('open');
+  $modal.setAttribute('aria-hidden', 'true');
+  $modalBody.innerHTML = '';
+  document.body.style.overflow = '';
+}
+
+$modalClose.addEventListener('click', closeModal);
+$modal.addEventListener('click', e => { if (e.target === $modal) closeModal(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && $modal.classList.contains('open')) closeModal();
+});
+
+/* =========================================================
+   7. EVENTOS
+   ========================================================= */
+$days.addEventListener('click', e => {
+  const btn = e.target.closest('.day-btn');
+  if (!btn) return;
+  currentDay = Number(btn.dataset.idx);
+  renderAll();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+$main.addEventListener('click', e => {
+  const videoBtn = e.target.closest('.video-btn');
+  if (videoBtn){
+    openModal(videoBtn.dataset.video, videoBtn.dataset.title);
+    return;
+  }
+  const check = e.target.closest('.check');
+  if (check){
+    const card = check.closest('.ex');
+    const id = card.dataset.id;
+    done[id] = !done[id];
+    if (!done[id]) delete done[id];
+    save();
+    renderAll();
+    return;
+  }
+  if (e.target.closest('#resetDay')){
+    const day = PLAN[currentDay];
+    idsOf(day).forEach(id => delete done[id]);
+    save();
+    renderAll();
+  }
+});
+
+/* =========================================================
+   8. INIT
+   ========================================================= */
+renderAll();
+</script>
+</body>
+</html>
